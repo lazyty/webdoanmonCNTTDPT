@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Vietnamese Sign Language Of Group 07</title>
+    <link rel="shortcut icon" href="https://courses.uit.edu.vn/theme/image.php/classic/theme/1728025335/favicon" />
+    <style>
+        body {
+            font-family: Times New Roman;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color, #f0f0f0);
+            color: var(--text-color, #000);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        header {
+            background-color: #007bff;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+        }
+
+        header .logo {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        header .mode-toggle {
+            cursor: pointer;
+            padding: 10px;
+            border: none;
+            background: none;
+            font-size: 18px;
+            color: #fff;
+            transition: transform 0.2s ease;
+        }
+
+        header .mode-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .content, .get-started-content {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .get-started {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .dark-mode .get-started {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        .light-mode .get-started {
+            background-color: #0056b3;
+            color: #fff;
+        }
+
+        .light-mode .get-started:hover {
+            background-color: #004085;
+            color: #fff;
+        }
+
+        .dark-mode .get-started:hover {
+            background-color: #0056b3;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .camera-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            gap: 4%;
+        }
+
+        .video, .sign-text {
+            width: 48%;
+            height: 400px;
+        }
+
+        .sign-text {
+            display: flex;
+            justify-content: left;
+            align-items: left;
+            font-size: 20px;
+            font-weight: bold;
+            border: 2px solid #ccc;
+            padding-left: 10px;
+            padding-top: 5px;
+            text-align: left;
+            margin-top: 10px;
+        }
+
+        .dark-mode {
+            --bg-color: #181818;
+            --text-color: #fff;
+        }
+
+        .light-mode {
+            --bg-color: #f0f0f0;
+            --text-color: #000;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo" onclick="goToMainPage()">Group 07</div>
+        <button class="mode-toggle">☀️</button>
+    </header>
+
+    <!-- Trang chính -->
+    <div class="content" id="mainPage">
+        <h1>Chào mừng bạn đến với Web Vietnamese Sign Language</h1>
+        <p>Hãy khám phá và tìm hiểu thêm về ngôn ngữ ký hiệu!</p>
+        <button class="get-started" onclick="showGetStarted()">GET STARTED</button>
+    </div>
+
+    <!-- Trang Get Started -->
+    <div class="get-started-content hidden" id="getStartedPage">
+        <h1>Vietnamese Sign Language</h1>
+        <p>Hãy sử dụng camera và xem các chữ ký hiệu ngôn ngữ!</p>
+        <div class="camera-container">
+            <video class="video" id="camera" autoplay></video>
+            <div class="sign-text" id="signText"></div>
+        </div>
+        <div style="text-align: center; margin-top: 10px;">
+            <button class="get-started" onclick="toggleCamera()">Bật/Tắt Camera</button>
+            <button class="get-started" onclick="captureScreenshot()">Chụp Màn Hình</button>
+        </div>
+        <canvas id="screenshotCanvas" style="display: none;"></canvas>
+    </div>
+
+    <script>
+        const toggleButton = document.querySelector('.mode-toggle');
+        const body = document.body;
+        const mainPage = document.getElementById('mainPage');
+        const getStartedPage = document.getElementById('getStartedPage');
+        const videoElement = document.getElementById('camera');
+        const signTextElement = document.getElementById('signText');
+        const canvas = document.getElementById('screenshotCanvas');
+        let cameraEnabled = false;
+
+        // Hàm kiểm tra và xóa localStorage sau 1 tiếng
+        function checkAndClearLocalStorage() {
+            const lastAccessTime = localStorage.getItem('lastAccessTime');
+            const currentTime = Date.now();
+
+            if (lastAccessTime && currentTime - parseInt(lastAccessTime, 10) > 1 * 60 * 60 * 1000) {
+                localStorage.clear(); // Xóa toàn bộ localStorage
+            }
+
+            // Cập nhật lại thời gian truy cập
+            localStorage.setItem('lastAccessTime', currentTime);
+        }
+
+        // Gọi hàm kiểm tra khi tải trang
+        checkAndClearLocalStorage();
+
+        const savedMode = localStorage.getItem('mode');
+        const savedPage = localStorage.getItem('currentPage');
+
+        // Xử lý chế độ sáng/tối
+        if (savedMode) {
+            body.classList.add(savedMode);
+            toggleButton.textContent = savedMode === 'light-mode' ? '☀️' : '🌙';
+        } else {
+            const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            if (prefersDarkScheme) {
+                body.classList.add('dark-mode');
+                toggleButton.textContent = '🌙';
+            } else {
+                body.classList.add('light-mode');
+                toggleButton.textContent = '☀️';
+            }
+        }
+
+        toggleButton.addEventListener('click', () => {
+            if (body.classList.contains('light-mode')) {
+                body.classList.replace('light-mode', 'dark-mode');
+                localStorage.setItem('mode', 'dark-mode');
+                toggleButton.textContent = '🌙';
+            } else {
+                body.classList.replace('dark-mode', 'light-mode');
+                localStorage.setItem('mode', 'light-mode');
+                toggleButton.textContent = '☀️';
+            }
+        });
+
+        // Hiển thị trang theo trạng thái lưu trữ trong localStorage
+        if (savedPage === 'getStarted') {
+            mainPage.classList.add('hidden');
+            getStartedPage.classList.remove('hidden');
+            startCamera();
+        } else {
+            mainPage.classList.remove('hidden');
+            getStartedPage.classList.add('hidden');
+            localStorage.setItem('currentPage', 'mainPage');
+        }
+
+        function showGetStarted() {
+            mainPage.classList.add('hidden');
+            getStartedPage.classList.remove('hidden');
+            localStorage.setItem('currentPage', 'getStarted');
+            startCamera();
+        }
+
+        function goToMainPage() {
+            mainPage.classList.remove('hidden');
+            getStartedPage.classList.add('hidden');
+            localStorage.setItem('currentPage', 'mainPage');
+            hideVideoAndSignText();
+            stopCamera();
+        }
+	
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = stream;
+                signTextElement.style.visibility = 'visible';
+                cameraEnabled = true;
+            } catch (err) {
+                console.error('Không thể truy cập camera:', err);
+            }
+        }
+
+        function stopCamera() {
+            const stream = videoElement.srcObject;
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                videoElement.srcObject = null;
+            }
+            cameraEnabled = false;
+        }
+
+        function toggleCamera() {
+            if (cameraEnabled) {
+                stopCamera();
+            } else {
+                startCamera();
+            }
+        }
+
+        function captureScreenshot() {
+            const context = canvas.getContext('2d');
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            const screenshotURL = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = screenshotURL;
+            link.download = 'screenshot.png';
+            link.click();
+        }
+
+        function hideVideoAndSignText() {
+            videoElement.style.visibility = 'hidden';
+            signTextElement.style.visibility = 'hidden';
+        }
+    </script>
+</body>
+</html>
