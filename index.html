@@ -92,6 +92,8 @@
         .video, .sign-text {
             width: 48%;
             height: 400px;
+	    transform: scaleX(-1);
+    	    -webkit-transform: scaleX(-1)
         }
 
         .sign-text {
@@ -158,6 +160,15 @@
         const savedMode = localStorage.getItem('mode');
         const savedPage = localStorage.getItem('currentPage');
 
+	function checkAndClearLocalStorage() {
+        	const currentTime = Date.now();
+        	if (lastAccessTime && (currentTime - parseInt(lastAccessTime) > 1 * 60 * 60 * 1000)) {
+            		localStorage.clear();
+            		console.log("Đã xóa dữ liệu do không truy cập trong 1 tiếng.");
+        	}
+        	// Cập nhật thời gian truy cập cuối cùng
+        	localStorage.setItem('lastAccessTime', currentTime);
+    	}
         // Xử lý chế độ sáng/tối
         function initializeMode() {
             if (savedMode) {
