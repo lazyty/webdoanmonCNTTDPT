@@ -7,14 +7,13 @@
     <link rel="shortcut icon" href="https://courses.uit.edu.vn/theme/image.php/classic/theme/1728025335/favicon" />
     <style>
         body {
-            font-family: Times New Roman;
+            font-family: "Times New Roman", serif;
             margin: 0;
             padding: 0;
             background-color: var(--bg-color, #f0f0f0);
             color: var(--text-color, #000);
             transition: background-color 0.3s ease, color 0.3s ease;
         }
-
         header {
             background-color: #007bff;
             padding: 10px 20px;
@@ -125,14 +124,12 @@
         <button class="mode-toggle">☀️</button>
     </header>
 
-    <!-- Trang chính -->
     <div class="content" id="mainPage">
         <h1>Chào mừng bạn đến với Web Vietnamese Sign Language</h1>
         <p>Hãy khám phá và tìm hiểu thêm về ngôn ngữ ký hiệu!</p>
         <button class="get-started" onclick="showGetStarted()">GET STARTED</button>
     </div>
 
-    <!-- Trang Get Started -->
     <div class="get-started-content hidden" id="getStartedPage">
         <h1>Vietnamese Sign Language</h1>
         <p>Hãy sử dụng camera và xem các chữ ký hiệu ngôn ngữ!</p>
@@ -141,7 +138,7 @@
             <div class="sign-text" id="signText"></div>
         </div>
         <div style="text-align: center; margin-top: 10px;">
-            <button class="get-started" onclick="toggleCamera()">Bật/Tắt Camera</button>
+            <button class="get-started" id="toggleCameraButton" onclick="toggleCamera()">Bật Camera</button>
             <button class="get-started" onclick="captureScreenshot()">Chụp Màn Hình</button>
         </div>
         <canvas id="screenshotCanvas" style="display: none;"></canvas>
@@ -154,112 +151,90 @@
         const getStartedPage = document.getElementById('getStartedPage');
         const videoElement = document.getElementById('camera');
         const signTextElement = document.getElementById('signText');
+        const toggleCameraButton = document.getElementById('toggleCameraButton');
         const canvas = document.getElementById('screenshotCanvas');
         let cameraEnabled = false;
-
-        // Hàm kiểm tra và xóa localStorage sau 1 tiếng
-        function checkAndClearLocalStorage() {
-            const lastAccessTime = localStorage.getItem('lastAccessTime');
-            const currentTime = Date.now();
-
-            if (lastAccessTime && currentTime - parseInt(lastAccessTime, 10) > 1 * 60 * 60 * 1000) {
-                localStorage.clear(); // Xóa toàn bộ localStorage
-            }
-
-            // Cập nhật lại thời gian truy cập
-            localStorage.setItem('lastAccessTime', currentTime);
-        }
-
-        // Gọi hàm kiểm tra khi tải trang
-        checkAndClearLocalStorage();
 
         const savedMode = localStorage.getItem('mode');
         const savedPage = localStorage.getItem('currentPage');
 
         // Xử lý chế độ sáng/tối
-        if (savedMode) {
-            body.classList.add(savedMode);
-            toggleButton.textContent = savedMode === 'light-mode' ? '☀️' : '🌙';
-        } else {
-            const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
-            if (prefersDarkScheme) {
-                body.classList.add('dark-mode');
-                toggleButton.textContent = '🌙';
+        function initializeMode() {
+            if (savedMode) {
+                body.classList.add(savedMode);
+                toggleButton.textContent = savedMode === 'light-mode' ? '☀️' : '🌙';
             } else {
-                body.classList.add('light-mode');
-                toggleButton.textContent = '☀️';
+                const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+                body.classList.add(prefersDark ? 'dark-mode' : 'light-mode');
+                toggleButton.textContent = prefersDark ? '🌙' : '☀️';
             }
         }
 
         toggleButton.addEventListener('click', () => {
-            if (body.classList.contains('light-mode')) {
-                body.classList.replace('light-mode', 'dark-mode');
-                localStorage.setItem('mode', 'dark-mode');
-                toggleButton.textContent = '🌙';
-            } else {
-                body.classList.replace('dark-mode', 'light-mode');
-                localStorage.setItem('mode', 'light-mode');
-                toggleButton.textContent = '☀️';
-            }
+            body.classList.toggle('dark-mode');
+            body.classList.toggle('light-mode');
+            localStorage.setItem('mode', body.classList.contains('dark-mode') ? 'dark-mode' : 'light-mode');
+            toggleButton.textContent = body.classList.contains('dark-mode') ? '🌙' : '☀️';
         });
 
-        // Hiển thị trang theo trạng thái lưu trữ trong localStorage
-        if (savedPage === 'getStarted') {
-            mainPage.classList.add('hidden');
-            getStartedPage.classList.remove('hidden');
-            startCamera();
-        } else {
-            mainPage.classList.remove('hidden');
-            getStartedPage.classList.add('hidden');
-            localStorage.setItem('currentPage', 'mainPage');
+        // Quản lý giao diện chính và trang Get Started
+        function initializePage() {
+            if (savedPage === 'getStarted') {
+                showGetStarted(true);
+            } else {
+                goToMainPage();
+            }
         }
 
-        function showGetStarted() {
+        function showGetStarted(skipCamera = false) {
             mainPage.classList.add('hidden');
             getStartedPage.classList.remove('hidden');
             localStorage.setItem('currentPage', 'getStarted');
-            startCamera();
+            if (!skipCamera) startCamera();
         }
 
         function goToMainPage() {
             mainPage.classList.remove('hidden');
             getStartedPage.classList.add('hidden');
             localStorage.setItem('currentPage', 'mainPage');
-            hideVideoAndSignText();
             stopCamera();
         }
-	
 
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 videoElement.srcObject = stream;
-                signTextElement.style.visibility = 'visible';
                 cameraEnabled = true;
+                updateButtonText();
             } catch (err) {
                 console.error('Không thể truy cập camera:', err);
+                alert("Không thể bật camera. Vui lòng kiểm tra lại!");
             }
         }
 
         function stopCamera() {
             const stream = videoElement.srcObject;
             if (stream) {
-                const tracks = stream.getTracks();
-                tracks.forEach(track => track.stop());
+                stream.getTracks().forEach(track => track.stop());
                 videoElement.srcObject = null;
             }
             cameraEnabled = false;
+            updateButtonText();
         }
 
         function toggleCamera() {
-            if (cameraEnabled) {
-                stopCamera();
-            } else {
-                startCamera();
-            }
+            cameraEnabled ? stopCamera() : startCamera();
+        }
+
+        function updateButtonText() {
+            toggleCameraButton.textContent = cameraEnabled ? 'Tắt Camera' : 'Bật Camera';
         }
 
         function captureScreenshot() {
+            if (!cameraEnabled) {
+                alert("Vui lòng bật camera trước khi chụp màn hình.");
+                return;
+            }
             const context = canvas.getContext('2d');
             canvas.width = videoElement.videoWidth;
             canvas.height = videoElement.videoHeight;
@@ -271,10 +246,9 @@
             link.click();
         }
 
-        function hideVideoAndSignText() {
-            videoElement.style.visibility = 'hidden';
-            signTextElement.style.visibility = 'hidden';
-        }
+        // Khởi tạo giao diện
+        initializeMode();
+        initializePage();
     </script>
 </body>
 </html>
