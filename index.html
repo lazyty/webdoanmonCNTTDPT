@@ -156,61 +156,66 @@
         const toggleCameraButton = document.getElementById('toggleCameraButton');
         const canvas = document.getElementById('screenshotCanvas');
         let cameraEnabled = false;
-
-        const savedMode = localStorage.getItem('mode');
-        const savedPage = localStorage.getItem('currentPage');
-
-	function checkAndClearLocalStorage() {
-        	const currentTime = Date.now();
-        	if (lastAccessTime && (currentTime - parseInt(lastAccessTime) > 1 * 60 * 60 * 1000)) {
-            		localStorage.clear();
-            		console.log("Đã xóa dữ liệu do không truy cập trong 1 tiếng.");
-        	}
-        	// Cập nhật thời gian truy cập cuối cùng
-        	localStorage.setItem('lastAccessTime', currentTime);
-    	}
+    
+        // Kiểm tra và xóa dữ liệu cũ trong localStorage
+        function checkAndClearLocalStorage() {
+            const lastAccessTime = localStorage.getItem('lastAccessTime');
+            const currentTime = Date.now();
+    
+            if (lastAccessTime && (currentTime - parseInt(lastAccessTime, 10) > 60 * 60 * 1000)) {
+                localStorage.clear();
+                console.log("Đã xóa dữ liệu do không truy cập trong 1 tiếng.");
+            }
+            localStorage.setItem('lastAccessTime', currentTime);
+        }
+    
         // Xử lý chế độ sáng/tối
         function initializeMode() {
+            const savedMode = localStorage.getItem('mode');
             if (savedMode) {
                 body.classList.add(savedMode);
                 toggleButton.textContent = savedMode === 'light-mode' ? '☀️' : '🌙';
             } else {
                 const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-                body.classList.add(prefersDark ? 'dark-mode' : 'light-mode');
+                const defaultMode = prefersDark ? 'dark-mode' : 'light-mode';
+                body.classList.add(defaultMode);
                 toggleButton.textContent = prefersDark ? '🌙' : '☀️';
             }
         }
-
+    
         toggleButton.addEventListener('click', () => {
             body.classList.toggle('dark-mode');
             body.classList.toggle('light-mode');
-            localStorage.setItem('mode', body.classList.contains('dark-mode') ? 'dark-mode' : 'light-mode');
-            toggleButton.textContent = body.classList.contains('dark-mode') ? '🌙' : '☀️';
+            const newMode = body.classList.contains('dark-mode') ? 'dark-mode' : 'light-mode';
+            localStorage.setItem('mode', newMode);
+            toggleButton.textContent = newMode === 'dark-mode' ? '🌙' : '☀️';
         });
-
+    
         // Quản lý giao diện chính và trang Get Started
         function initializePage() {
+            const savedPage = localStorage.getItem('currentPage');
             if (savedPage === 'getStarted') {
                 showGetStarted(true);
             } else {
                 goToMainPage();
             }
         }
-
+    
         function showGetStarted(skipCamera = false) {
             mainPage.classList.add('hidden');
             getStartedPage.classList.remove('hidden');
             localStorage.setItem('currentPage', 'getStarted');
             if (!skipCamera) startCamera();
         }
-
+    
         function goToMainPage() {
             mainPage.classList.remove('hidden');
             getStartedPage.classList.add('hidden');
             localStorage.setItem('currentPage', 'mainPage');
             stopCamera();
         }
-
+    
+        // Bật/tắt camera
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -219,10 +224,10 @@
                 updateButtonText();
             } catch (err) {
                 console.error('Không thể truy cập camera:', err);
-                alert("Không thể bật camera. Vui lòng kiểm tra lại!");
+                alert("Không thể bật camera. Vui lòng kiểm tra quyền truy cập và kết nối thiết bị.");
             }
         }
-
+    
         function stopCamera() {
             const stream = videoElement.srcObject;
             if (stream) {
@@ -232,15 +237,16 @@
             cameraEnabled = false;
             updateButtonText();
         }
-
+    
         function toggleCamera() {
             cameraEnabled ? stopCamera() : startCamera();
         }
-
+    
         function updateButtonText() {
             toggleCameraButton.textContent = cameraEnabled ? 'Tắt Camera' : 'Bật Camera';
         }
-
+    
+        // Chụp màn hình từ camera
         function captureScreenshot() {
             if (!cameraEnabled) {
                 alert("Vui lòng bật camera trước khi chụp màn hình.");
@@ -256,10 +262,11 @@
             link.download = 'screenshot.png';
             link.click();
         }
-
+    
         // Khởi tạo giao diện
+        checkAndClearLocalStorage();
         initializeMode();
         initializePage();
-    </script>
+    </script>    
 </body>
 </html>
